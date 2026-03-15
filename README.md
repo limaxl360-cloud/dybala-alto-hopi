@@ -1,1 +1,0 @@
-# dybala-alto-hopi

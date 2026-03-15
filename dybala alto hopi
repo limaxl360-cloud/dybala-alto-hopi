@@ -1,0 +1,266 @@
+local Players = game:GetService("Players")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local StarterGui = game:GetService("StarterGui")
+
+local player = Players.LocalPlayer
+local PlaceID = game.PlaceId
+
+local scanning = false
+local visited = {}
+
+local VALOR50 = 50000000
+local VALOR300 = 300000000
+
+-- notificação
+local function Notify(msg)
+    StarterGui:SetCore("SendNotification",{
+        Title="Dybala Alto Hop Server",
+        Text=msg,
+        Duration=5
+    })
+end
+
+-- copiar job id
+local function CopyJob()
+    if setclipboard then
+        setclipboard(game.JobId)
+    end
+end
+
+-- GUI
+local gui = Instance.new("ScreenGui",player.PlayerGui)
+
+local frame = Instance.new("Frame",gui)
+frame.Size = UDim2.new(0,330,0,260)
+frame.Position = UDim2.new(0,20,0,20)
+frame.BackgroundColor3 = Color3.fromRGB(10,10,10)
+frame.Active = true
+frame.Draggable = true
+
+Instance.new("UICorner",frame)
+
+local stroke = Instance.new("UIStroke",frame)
+stroke.Color = Color3.fromRGB(0,120,255)
+
+local title = Instance.new("TextLabel",frame)
+title.Size = UDim2.new(1,0,0,40)
+title.Text = "Dybala Alto Hop Server"
+title.TextColor3 = Color3.fromRGB(255,255,255)
+title.BackgroundColor3 = Color3.fromRGB(15,15,15)
+
+Instance.new("UICorner",title)
+
+local status = Instance.new("TextLabel",frame)
+status.Position = UDim2.new(0,0,0,45)
+status.Size = UDim2.new(1,0,0,25)
+status.Text = "Status: Idle"
+status.TextColor3 = Color3.fromRGB(255,255,255)
+status.BackgroundTransparency = 1
+
+local richest = Instance.new("TextLabel",frame)
+richest.Position = UDim2.new(0,0,0,70)
+richest.Size = UDim2.new(1,0,0,25)
+richest.Text = "Richest: ?"
+richest.TextColor3 = Color3.fromRGB(255,255,255)
+richest.BackgroundTransparency = 1
+
+local total = Instance.new("TextLabel",frame)
+total.Position = UDim2.new(0,0,0,95)
+total.Size = UDim2.new(1,0,0,25)
+total.Text = "Total Value: ?"
+total.TextColor3 = Color3.fromRGB(255,255,255)
+total.BackgroundTransparency = 1
+
+-- criar botão
+local function Button(text,pos)
+
+    local b = Instance.new("TextButton",frame)
+    b.Size = UDim2.new(0.9,0,0,35)
+    b.Position = pos
+    b.Text = text
+    b.BackgroundColor3 = Color3.fromRGB(0,40,90)
+    b.TextColor3 = Color3.fromRGB(255,255,255)
+
+    Instance.new("UICorner",b)
+
+    return b
+
+end
+
+local start = Button("Start Scanner",UDim2.new(0.05,0,0,140))
+local hop = Button("Server Hop",UDim2.new(0.05,0,0,185))
+local stop = Button("Stop",UDim2.new(0.05,0,0,230))
+
+-- scanner bases
+local function ScanBases()
+
+    local highest = 0
+    local richestPlayer = nil
+    local totalValue = 0
+
+    for _,p in pairs(Players:GetPlayers()) do
+
+        local stats = p:FindFirstChild("leaderstats")
+
+        if stats then
+            for _,v in pairs(stats:GetChildren()) do
+
+                if tonumber(v.Value) then
+
+                    totalValue += v.Value
+
+                    if v.Value > highest then
+                        highest = v.Value
+                        richestPlayer = p.Name
+                    end
+
+                end
+
+            end
+        end
+
+    end
+
+    if richestPlayer then
+        richest.Text = "Richest: "..richestPlayer
+    end
+
+    total.Text = "Total Value: "..totalValue
+
+end
+
+-- detectar brainrot
+local function DetectBrainrot()
+
+    for _,v in pairs(workspace:GetDescendants()) do
+
+        if v:IsA("NumberValue") or v:IsA("IntValue") then
+
+            if v.Value >= VALOR300 then
+                status.Text="🔥 300M Brainrot"
+                Notify("300M Brainrot encontrado")
+                CopyJob()
+                return true
+            end
+
+            if v.Value >= VALOR50 then
+                status.Text="💎 50M Brainrot"
+                Notify("50M Brainrot encontrado")
+                CopyJob()
+                return true
+            end
+
+        end
+
+        if string.find(string.lower(v.Name),"secret") then
+            status.Text="🧠 Secret Brainrot"
+            Notify("Secret Brainrot encontrado")
+            CopyJob()
+            return true
+        end
+
+    end
+
+    return false
+
+end
+
+-- server hop infinito seguro
+local function ServerHop()
+
+    while true do
+
+        local success,res = pcall(function()
+
+            local url =
+            "https://games.roblox.com/v1/games/"..
+            PlaceID..
+            "/servers/Public?sortOrder=Asc&limit=100"
+
+            return game:HttpGet(url)
+
+        end)
+
+        if success then
+
+            local data = HttpService:JSONDecode(res)
+
+            if data and data.data then
+
+                local found = false
+
+                for _,server in pairs(data.data) do
+
+                    if server.playing < server.maxPlayers then
+
+                        if not visited[server.id] then
+
+                            visited[server.id] = true
+                            found = true
+
+                            status.Text = "Entrando em novo servidor..."
+
+                            TeleportService:TeleportToPlaceInstance(
+                                PlaceID,
+                                server.id,
+                                player
+                            )
+
+                            break
+
+                        end
+
+                    end
+
+                end
+
+                if not found then
+                    visited = {}
+                end
+
+            end
+
+        else
+            warn("Erro ao buscar servidores")
+        end
+
+        task.wait(1)
+
+    end
+
+end
+
+-- iniciar scanner
+start.MouseButton1Click:Connect(function()
+
+    scanning = true
+    status.Text = "Scanning..."
+
+    while scanning do
+
+        ScanBases()
+
+        if DetectBrainrot() then
+            break
+        end
+
+        ServerHop()
+
+        task.wait(2)
+
+    end
+
+end)
+
+-- botão hop
+hop.MouseButton1Click:Connect(function()
+    status.Text = "Server Hop..."
+    ServerHop()
+end)
+
+-- parar
+stop.MouseButton1Click:Connect(function()
+    scanning = false
+    status.Text = "Stopped"
+end)
