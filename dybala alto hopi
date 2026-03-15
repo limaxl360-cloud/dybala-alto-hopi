@@ -6,22 +6,22 @@ local StarterGui = game:GetService("StarterGui")
 local player = Players.LocalPlayer
 local PlaceID = game.PlaceId
 
-local scanning = false
 local visited = {}
+local scanning = false
 
 local VALOR50 = 50000000
 local VALOR300 = 300000000
 
--- notificação
+-- NOTIFICAÇÃO
 local function Notify(msg)
     StarterGui:SetCore("SendNotification",{
-        Title="Dybala Alto Hop Server",
+        Title="Dybala Ultra Fast Hop",
         Text=msg,
-        Duration=5
+        Duration=4
     })
 end
 
--- copiar job id
+-- COPIAR JOBID
 local function CopyJob()
     if setclipboard then
         setclipboard(game.JobId)
@@ -37,7 +37,6 @@ frame.Position = UDim2.new(0,20,0,20)
 frame.BackgroundColor3 = Color3.fromRGB(10,10,10)
 frame.Active = true
 frame.Draggable = true
-
 Instance.new("UICorner",frame)
 
 local stroke = Instance.new("UIStroke",frame)
@@ -45,54 +44,48 @@ stroke.Color = Color3.fromRGB(0,120,255)
 
 local title = Instance.new("TextLabel",frame)
 title.Size = UDim2.new(1,0,0,40)
-title.Text = "Dybala Alto Hop Server"
-title.TextColor3 = Color3.fromRGB(255,255,255)
+title.Text = "DYBALA ULTRA HOP"
+title.TextColor3 = Color3.new(1,1,1)
 title.BackgroundColor3 = Color3.fromRGB(15,15,15)
-
-Instance.new("UICorner",title)
 
 local status = Instance.new("TextLabel",frame)
 status.Position = UDim2.new(0,0,0,45)
 status.Size = UDim2.new(1,0,0,25)
 status.Text = "Status: Idle"
-status.TextColor3 = Color3.fromRGB(255,255,255)
+status.TextColor3 = Color3.new(1,1,1)
 status.BackgroundTransparency = 1
 
 local richest = Instance.new("TextLabel",frame)
 richest.Position = UDim2.new(0,0,0,70)
 richest.Size = UDim2.new(1,0,0,25)
 richest.Text = "Richest: ?"
-richest.TextColor3 = Color3.fromRGB(255,255,255)
+richest.TextColor3 = Color3.new(1,1,1)
 richest.BackgroundTransparency = 1
 
 local total = Instance.new("TextLabel",frame)
 total.Position = UDim2.new(0,0,0,95)
 total.Size = UDim2.new(1,0,0,25)
 total.Text = "Total Value: ?"
-total.TextColor3 = Color3.fromRGB(255,255,255)
+total.TextColor3 = Color3.new(1,1,1)
 total.BackgroundTransparency = 1
 
--- criar botão
+-- BOTÃO
 local function Button(text,pos)
-
     local b = Instance.new("TextButton",frame)
     b.Size = UDim2.new(0.9,0,0,35)
     b.Position = pos
     b.Text = text
     b.BackgroundColor3 = Color3.fromRGB(0,40,90)
-    b.TextColor3 = Color3.fromRGB(255,255,255)
-
+    b.TextColor3 = Color3.new(1,1,1)
     Instance.new("UICorner",b)
-
     return b
-
 end
 
 local start = Button("Start Scanner",UDim2.new(0.05,0,0,140))
-local hop = Button("Server Hop",UDim2.new(0.05,0,0,185))
+local hop = Button("Fast Server Hop",UDim2.new(0.05,0,0,185))
 local stop = Button("Stop",UDim2.new(0.05,0,0,230))
 
--- scanner bases
+-- SCAN BASES
 local function ScanBases()
 
     local highest = 0
@@ -130,7 +123,7 @@ local function ScanBases()
 
 end
 
--- detectar brainrot
+-- DETECTAR BRAINROT
 local function DetectBrainrot()
 
     for _,v in pairs(workspace:GetDescendants()) do
@@ -138,14 +131,14 @@ local function DetectBrainrot()
         if v:IsA("NumberValue") or v:IsA("IntValue") then
 
             if v.Value >= VALOR300 then
-                status.Text="🔥 300M Brainrot"
+                status.Text="300M Brainrot"
                 Notify("300M Brainrot encontrado")
                 CopyJob()
                 return true
             end
 
             if v.Value >= VALOR50 then
-                status.Text="💎 50M Brainrot"
+                status.Text="50M Brainrot"
                 Notify("50M Brainrot encontrado")
                 CopyJob()
                 return true
@@ -154,7 +147,7 @@ local function DetectBrainrot()
         end
 
         if string.find(string.lower(v.Name),"secret") then
-            status.Text="🧠 Secret Brainrot"
+            status.Text="Secret Brainrot"
             Notify("Secret Brainrot encontrado")
             CopyJob()
             return true
@@ -166,72 +159,56 @@ local function DetectBrainrot()
 
 end
 
--- server hop infinito seguro
+-- ULTRA FAST SERVER HOP
 local function ServerHop()
+
+    local cursor = ""
 
     while true do
 
+        local url = "https://games.roblox.com/v1/games/"..PlaceID.."/servers/Public?sortOrder=Asc&limit=100&cursor="..cursor
+
         local success,res = pcall(function()
-
-            local url =
-            "https://games.roblox.com/v1/games/"..
-            PlaceID..
-            "/servers/Public?sortOrder=Asc&limit=100"
-
             return game:HttpGet(url)
-
         end)
 
         if success then
 
             local data = HttpService:JSONDecode(res)
 
-            if data and data.data then
+            for _,server in pairs(data.data) do
 
-                local found = false
+                if server.playing < server.maxPlayers then
 
-                for _,server in pairs(data.data) do
+                    if not visited[server.id] then
 
-                    if server.playing < server.maxPlayers then
+                        visited[server.id] = true
 
-                        if not visited[server.id] then
+                        status.Text = "Teleportando..."
 
-                            visited[server.id] = true
-                            found = true
+                        TeleportService:TeleportToPlaceInstance(
+                            PlaceID,
+                            server.id,
+                            player
+                        )
 
-                            status.Text = "Entrando em novo servidor..."
-
-                            TeleportService:TeleportToPlaceInstance(
-                                PlaceID,
-                                server.id,
-                                player
-                            )
-
-                            break
-
-                        end
+                        task.wait(0.15)
 
                     end
-
                 end
-
-                if not found then
-                    visited = {}
-                end
-
             end
 
-        else
-            warn("Erro ao buscar servidores")
+            cursor = data.nextPageCursor or ""
+
         end
 
-        task.wait(1)
+        task.wait(0.15)
 
     end
 
 end
 
--- iniciar scanner
+-- START
 start.MouseButton1Click:Connect(function()
 
     scanning = true
@@ -247,19 +224,19 @@ start.MouseButton1Click:Connect(function()
 
         ServerHop()
 
-        task.wait(2)
+        task.wait(0.5)
 
     end
 
 end)
 
--- botão hop
+-- HOP
 hop.MouseButton1Click:Connect(function()
-    status.Text = "Server Hop..."
+    status.Text = "FAST HOP..."
     ServerHop()
 end)
 
--- parar
+-- STOP
 stop.MouseButton1Click:Connect(function()
     scanning = false
     status.Text = "Stopped"
