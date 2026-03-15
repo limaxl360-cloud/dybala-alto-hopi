@@ -1,243 +1,159 @@
+arepeat task.wait() until game:IsLoaded()
+
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
-local StarterGui = game:GetService("StarterGui")
+local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 local PlaceID = game.PlaceId
 
+local AUTO_JOIN = false
 local visited = {}
-local scanning = false
+local servers = {}
 
-local VALOR50 = 50000000
-local VALOR300 = 300000000
+--------------------------------------------------
+-- BUSCA RÁPIDA DE SERVIDORES
+--------------------------------------------------
 
--- NOTIFICAÇÃO
-local function Notify(msg)
-    StarterGui:SetCore("SendNotification",{
-        Title="Dybala Ultra Fast Hop",
-        Text=msg,
-        Duration=4
-    })
-end
-
--- COPIAR JOBID
-local function CopyJob()
-    if setclipboard then
-        setclipboard(game.JobId)
-    end
-end
-
--- GUI
-local gui = Instance.new("ScreenGui",player.PlayerGui)
-
-local frame = Instance.new("Frame",gui)
-frame.Size = UDim2.new(0,330,0,260)
-frame.Position = UDim2.new(0,20,0,20)
-frame.BackgroundColor3 = Color3.fromRGB(10,10,10)
-frame.Active = true
-frame.Draggable = true
-Instance.new("UICorner",frame)
-
-local stroke = Instance.new("UIStroke",frame)
-stroke.Color = Color3.fromRGB(0,120,255)
-
-local title = Instance.new("TextLabel",frame)
-title.Size = UDim2.new(1,0,0,40)
-title.Text = "DYBALA ULTRA HOP"
-title.TextColor3 = Color3.new(1,1,1)
-title.BackgroundColor3 = Color3.fromRGB(15,15,15)
-
-local status = Instance.new("TextLabel",frame)
-status.Position = UDim2.new(0,0,0,45)
-status.Size = UDim2.new(1,0,0,25)
-status.Text = "Status: Idle"
-status.TextColor3 = Color3.new(1,1,1)
-status.BackgroundTransparency = 1
-
-local richest = Instance.new("TextLabel",frame)
-richest.Position = UDim2.new(0,0,0,70)
-richest.Size = UDim2.new(1,0,0,25)
-richest.Text = "Richest: ?"
-richest.TextColor3 = Color3.new(1,1,1)
-richest.BackgroundTransparency = 1
-
-local total = Instance.new("TextLabel",frame)
-total.Position = UDim2.new(0,0,0,95)
-total.Size = UDim2.new(1,0,0,25)
-total.Text = "Total Value: ?"
-total.TextColor3 = Color3.new(1,1,1)
-total.BackgroundTransparency = 1
-
--- BOTÃO
-local function Button(text,pos)
-    local b = Instance.new("TextButton",frame)
-    b.Size = UDim2.new(0.9,0,0,35)
-    b.Position = pos
-    b.Text = text
-    b.BackgroundColor3 = Color3.fromRGB(0,40,90)
-    b.TextColor3 = Color3.new(1,1,1)
-    Instance.new("UICorner",b)
-    return b
-end
-
-local start = Button("Start Scanner",UDim2.new(0.05,0,0,140))
-local hop = Button("Fast Server Hop",UDim2.new(0.05,0,0,185))
-local stop = Button("Stop",UDim2.new(0.05,0,0,230))
-
--- SCAN BASES
-local function ScanBases()
-
-    local highest = 0
-    local richestPlayer = nil
-    local totalValue = 0
-
-    for _,p in pairs(Players:GetPlayers()) do
-
-        local stats = p:FindFirstChild("leaderstats")
-
-        if stats then
-            for _,v in pairs(stats:GetChildren()) do
-
-                if tonumber(v.Value) then
-
-                    totalValue += v.Value
-
-                    if v.Value > highest then
-                        highest = v.Value
-                        richestPlayer = p.Name
-                    end
-
-                end
-
-            end
-        end
-
-    end
-
-    if richestPlayer then
-        richest.Text = "Richest: "..richestPlayer
-    end
-
-    total.Text = "Total Value: "..totalValue
-
-end
-
--- DETECTAR BRAINROT
-local function DetectBrainrot()
-
-    for _,v in pairs(workspace:GetDescendants()) do
-
-        if v:IsA("NumberValue") or v:IsA("IntValue") then
-
-            if v.Value >= VALOR300 then
-                status.Text="300M Brainrot"
-                Notify("300M Brainrot encontrado")
-                CopyJob()
-                return true
-            end
-
-            if v.Value >= VALOR50 then
-                status.Text="50M Brainrot"
-                Notify("50M Brainrot encontrado")
-                CopyJob()
-                return true
-            end
-
-        end
-
-        if string.find(string.lower(v.Name),"secret") then
-            status.Text="Secret Brainrot"
-            Notify("Secret Brainrot encontrado")
-            CopyJob()
-            return true
-        end
-
-    end
-
-    return false
-
-end
-
--- ULTRA FAST SERVER HOP
-local function ServerHop()
+local function FastFetchServers()
 
     local cursor = ""
 
-    while true do
+    while AUTO_JOIN do
 
-        local url = "https://games.roblox.com/v1/games/"..PlaceID.."/servers/Public?sortOrder=Asc&limit=100&cursor="..cursor
+        local url =
+        "https://games.roblox.com/v1/games/"..
+        PlaceID..
+        "/servers/Public?sortOrder=Asc&limit=100&cursor="..
+        cursor
 
-        local success,res = pcall(function()
-            return game:HttpGet(url)
-        end)
+        task.spawn(function()
 
-        if success then
+            local success,response = pcall(function()
+                return game:HttpGet(url)
+            end)
 
-            local data = HttpService:JSONDecode(res)
+            if success then
 
-            for _,server in pairs(data.data) do
+                local data = HttpService:JSONDecode(response)
 
-                if server.playing < server.maxPlayers then
+                for _,server in ipairs(data.data) do
 
-                    if not visited[server.id] then
-
-                        visited[server.id] = true
-
-                        status.Text = "Teleportando..."
-
-                        TeleportService:TeleportToPlaceInstance(
-                            PlaceID,
-                            server.id,
-                            player
-                        )
-
-                        task.wait(0.15)
-
+                    if server.playing < server.maxPlayers then
+                        table.insert(servers,server.id)
                     end
+
                 end
+
+                cursor = data.nextPageCursor or ""
+
             end
 
-            cursor = data.nextPageCursor or ""
+        end)
 
-        end
-
-        task.wait(0.15)
+        task.wait(0.03) -- muito mais rápido
 
     end
 
 end
 
--- START
-start.MouseButton1Click:Connect(function()
+--------------------------------------------------
+-- AUTO JOIN LOOP
+--------------------------------------------------
 
-    scanning = true
-    status.Text = "Scanning..."
+local function AutoJoinLoop()
 
-    while scanning do
+    while AUTO_JOIN do
 
-        ScanBases()
+        if #servers > 0 then
 
-        if DetectBrainrot() then
-            break
+            local serverId = table.remove(servers,1)
+
+            if serverId and not visited[serverId] then
+
+                visited[serverId] = true
+
+                print("🌎 Tentando servidor:",serverId)
+
+                pcall(function()
+
+                    TeleportService:TeleportToPlaceInstance(
+                        PlaceID,
+                        serverId,
+                        player
+                    )
+
+                end)
+
+                task.wait(1.5)
+
+            end
+
+        else
+
+            task.wait(0.1)
+
         end
-
-        ServerHop()
-
-        task.wait(0.5)
 
     end
 
-end)
+end
 
--- HOP
-hop.MouseButton1Click:Connect(function()
-    status.Text = "FAST HOP..."
-    ServerHop()
-end)
+--------------------------------------------------
+-- MENU
+--------------------------------------------------
 
--- STOP
-stop.MouseButton1Click:Connect(function()
-    scanning = false
-    status.Text = "Stopped"
+local function CreateUI()
+
+    local gui = Instance.new("ScreenGui")
+    gui.Parent = player:WaitForChild("PlayerGui")
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0,240,0,120)
+    frame.Position = UDim2.new(0.5,-120,0.5,-60)
+    frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+    frame.Visible = false
+    frame.Parent = gui
+
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0,180,0,40)
+    btn.Position = UDim2.new(0.5,-90,0.5,-20)
+    btn.Text = "Auto Join: OFF"
+    btn.Parent = frame
+
+    btn.MouseButton1Click:Connect(function()
+
+        AUTO_JOIN = not AUTO_JOIN
+
+        btn.Text =
+        AUTO_JOIN and
+        "Auto Join: ON" or
+        "Auto Join: OFF"
+
+        if AUTO_JOIN then
+            task.spawn(FastFetchServers)
+            task.spawn(AutoJoinLoop)
+        end
+
+    end)
+
+    return frame
+
+end
+
+local menu = CreateUI()
+
+--------------------------------------------------
+-- TECLA H
+--------------------------------------------------
+
+UserInputService.InputBegan:Connect(function(input,gp)
+
+    if gp then return end
+
+    if input.KeyCode == Enum.KeyCode.H then
+        menu.Visible = not menu.Visible
+    end
+
 end)
